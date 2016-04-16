@@ -1,0 +1,57 @@
+.data
+#writedoc: .asciiz "./newfile.txt"
+filename: .asciiz "./input.asm"
+buffer: .space 1
+hashtag: .byte '#'
+
+.text
+la $t0, buffer		#armazena em t0 o endereço do buffer
+
+#abrir arquivo para leitura
+li $v0, 13		
+la $a0, filename
+li $a1, 0		#0 = leitura
+li $a2, 0
+syscall
+move $s0, $v0
+
+ler_letra:
+	li $v0, 14		
+	move $a0, $s0			#seta arquivo para leitura
+	la $a1, 0($t0)			#define endereço do buffer 
+	lb $t1, hashtag
+	lb $t2, 1($t0)
+	li $a2, 1			#tamanho do buffer
+	syscall
+	beq  $t0, $t1, ler_letra		#verifica se possui hashtag
+	addi $t0, $t0, 1			#aponta para o proximo espaço na memoria
+	j ler_letra	
+
+
+
+#####################################################
+##########Write memory data in a txt document################
+# Close the file 
+#li   $v0, 16       # system call for close file
+#move $a0, $s0      # file descriptor to close
+#syscall            # close file
+
+#open a new file
+#li $v0, 13		#system call for open file
+#la $a0, writedoc
+#li $a1, 1		#open for read
+#li $a2, 0
+#syscall 		#try to open a file (file descriptor -> #v0)
+#move $s1, $v0		#store file descriptor
+
+# Write to file just opened
+#  li   $v0, 15       # system call for write to file
+#  move $a0, $s1      # file descriptor 
+#  la   $a1, buffer  # address of buffer from which to write
+#  li   $a2, 5      # hardcoded buffer length
+#  syscall            # write to file
+  
+  # Close the file 
+#  li   $v0, 16       # system call for close file
+#  move $a0, $s1     # file descriptor to close
+#  syscall            # close file
