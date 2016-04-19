@@ -1,25 +1,54 @@
 .data
+print_arquivo: .asciiz "Digite o arquivo que deseja realizar a leitura: "
 writedoc: .asciiz "./newfile.txt"
-filename: .asciiz "./input.asm"
+filename: .space 150
 buffer: .space 1
-hashtag: .byte '#'	#verificar se podemos mudar para codigo ascii correspondente
+
 
 
 
 .text
 la $t0, buffer		#armazena em t0 o endereço do buffer
-lb $s3, hashtag
 move $t3, $zero	
+
+
+#####################################################
+#                  Obter endereço do arquivo de entrada                            #
+#####################################################
+li $v0, 4
+la $a0, print_arquivo
+syscall
+
+li $v0, 8		#obter string digitada
+la $a0, filename
+li $a1, 150
+syscall
+la $t1, filename
+j achar_newline
+
+achar_newline:
+	lb $t2, 0($t1)
+	beq $t2, 10, retirar_newline
+	addi $t1, $t1, 1
+	j achar_newline
+	
+retirar_newline:
+	li $t2, 0
+	sb $t2, 0($t1)
+	j abrir_arquivo
+
+
 
 #####################################################
 #                                 Abrir arquivo para leitura                                #
 #####################################################
-li $v0, 13		
-la $a0, filename	#posteriormente receber string do usuario
-li $a1, 0		#0 = leitura
-li $a2, 0
-syscall
-move $s0, $v0
+abrir_arquivo:
+	li $v0, 13		
+	la $a0, filename	#posteriormente receber string do usuario
+	li $a1, 0		#0 = leitura
+	li $a2, 0
+	syscall
+	move $s0, $v0
 
 
 #####################################################
@@ -32,7 +61,7 @@ ler_letra:
 	li $a2, 1				#tamanho do buffer
 	syscall
 	lb $t1, 0($t0)
-	beq  $t1, $s3, jump_line		#verifica se possui hashtag
+	beq  $t1, 35, jump_line		#verifica se possui hashtag
 	addi $t0, $t0, 1			#aponta para o proximo espaço na memoria
 	addi $t3, $t3, 1			#contador de caracteres
 	beq  $v0 $zero, fim_leitura		#verifica fim do arquivo		
@@ -59,9 +88,9 @@ jump_line:
 #                                 Fecha arquivo de leitura                                  #
 #####################################################		
 fim_leitura:	
-li   $v0, 16       				# system call for close file
-move $a0, $s0      				# file descriptor to close
-syscall       
+	li   $v0, 16       				# system call for close file
+	move $a0, $s0      				# file descriptor to close
+	syscall       
 
 
 #####################################################
