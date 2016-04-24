@@ -1,4 +1,3 @@
-a
 # Exemplo Clear
 
 # Clear 1 - Array

@@ -8,7 +8,17 @@ NomeArquivoSaida: .asciiz "./out.txt"
 NomeLabel: .space 1000
 EnderecoLabel: .space 400	#Espaço para registrar endereço de  100 Labels
 
+#Instrucoes
+NomeInst: .ascii "add\0addu\0"
+OpcodeInst: .word 0
+FunctInst: .word 32
+TipoInst: .word 1
+
+#Tipo 1 - R
+
+
 BufferLeitura: .space 4000
+Instrucao: .space 8
 
 #Mensagens
 DigiteArquivoEntrada: .asciiz "Digite o arquivo que deseja realizar a leitura: "
@@ -21,7 +31,7 @@ ErroLeituraArquivo: .asciiz "ERRO 1: O arquivo não pode ser lido."
 #s2 - Endereço de memoria dos dados lidos do arquivo de entrada
 #s3 - Posição de inicio do .text
 #s4 - Contador de instruções
-#s5
+#s5 
 
 .text
 
@@ -169,18 +179,20 @@ EncontrarText:
 		jr $ra
 
 InterpretadordeInstrucoes:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
 	move $t0, $s3
-	move $s4, $zero
+	li $s4, 0
 	la $t4, NomeLabel
 	la $t5, EnderecoLabel
-	
+	la $t6, NomeInst 
 	
 	LoopInterpretador:
 		lbu $t1, 0($t0)
 		beq $t1, 58, NovaLabel			#Encontra ( : )
 		beq $t1, 32, NovaInstrucao		#Encontra Espaço
 		beq $t1, 9, NovaInstrucao		#Encontra Tab
-		beq $t1, 0, FimInterpretador 
+		beq $t1, 0, FimInterpretador 		#Encontra NULL
 		addi $t0, $t0, 1
 		j LoopInterpretador
 		
@@ -191,14 +203,69 @@ InterpretadordeInstrucoes:
 			beq $t1, 32, LoopInterpretador		#Encontra Espaço
 			beq $t1, 9, LoopInterpretador		#Encontra Tab
 			beq $t1, 10, LoopInterpretador		#Encontra NewLine
+			move $t2, $t0
 			addi $s4, $s4, 1
 			
-			LoopNovaInstrucao:
+			InicioInstrucao:
+				addi $t2, $t2, -1
+				lbu $t1, -1($t2)
+				beq $t1, 10, GravaPalavra
+				j InicioInstrucao
+			GravaPalavra:
+				la $t6, NomeInst 
+				la $t7, Instrucao
+				addi $t3, $t0, -2
+				
+				LoopGravaPalavra:
+					lbu $t1, 0($t2)
+					sb $t1, 0($t7)
+					beq $t2, $t3, GravaFim
+					addi $t2, $t2, 1
+					addi $t7, $t7, 1
+					j LoopGravaPalavra 
+					
+					GravaFim:
+						addi $t7, $t7, 1
+						li $t1, 0
+						sb $t1, 0($t7)
+						j EncontraMnemonico
+						
+			EncontraMnemonico:
+				la $t7, Instrucao
+				li $t3, 0
+				
+				LoopEncontraMnemonico:
+					lbu $t1, 0($t7)
+					lbu $t2, 0($t6)
+					bne $t1, $t2, ProximoMnemonico
+					beq $t1, 0, ArmazenaMnemonico
+					addi $t7, $t7, 1
+					addi $t6, $t6, 1
+					j LoopEncontraMnemonico
+				
+				ProximoMnemonico:
+					lbu $t1, 0($t6)
+					addi $t6, $t6, 1
+					beq $t1, 0, TestaOutro
+					j ProximoMnemonico
+					
+					TestaOutro:
+						addi $t3, $t3, 1
+						la $t7, Instrucao
+						j LoopEncontraMnemonico
+				
+				ArmazenaMnemonico:
+					move $a0, $t3			#Armazena o numero correspondente a função
+					jal TrataInstrucao
+					j ProximaLinha
+					j Sair
+			
+			ProximaLinha:
 				lbu $t1, 0($t0)
 				beq $t1, 10, LoopInterpretador		#Encontra NewLine
 				beq $t1, 0, FimInterpretador		#Encontra Fim Arquivo
 				addi $t0, $t0, 1
-				j LoopNovaInstrucao	
+				j ProximaLinha	
 		
 		NovaLabel:
 			addi $s4, $s4, 1
@@ -208,11 +275,11 @@ InterpretadordeInstrucoes:
 			move $t2, $t0
 			addi $t2, $t2, -1
 			
-			IniciodaInstrucao:
+			IniciodaLabel:
 				addi $t1, $t1, -1
 				lbu $t3, -1($t1)
 				beq $t3, 10, GravaLabel		#Encontra NewLine
-				j IniciodaInstrucao
+				j IniciodaLabel
 			
 			GravaLabel:
 				lbu $t3, 0($t1)
@@ -231,7 +298,15 @@ InterpretadordeInstrucoes:
 				j LoopInterpretador
 				
 	FimInterpretador:
+		lw $ra, ($sp) 
+		addi $sp, $sp, 4
 		jr $ra
+
+TrataInstrucao:
+	li $v0, 1
+	syscall
+	jr $ra
+
 SaidadeErro:
 	li $v0, 10
 	syscall	
