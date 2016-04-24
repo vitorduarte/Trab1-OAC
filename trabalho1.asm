@@ -9,22 +9,34 @@ NomeLabel: .space 1000
 EnderecoLabel: .space 400	#Espaço para registrar endereço de  100 Labels
 
 #Instrucoes
-NomeInst: .ascii "add\0addu\0"
-OpcodeInst: .word 0
-FunctInst: .word 32
-TipoInst: .word 1
+NomeInst: .ascii "add\0addu\0sub\0subu\0and\0or\0nor\0slt\0sltu\0addi\0addiu\0slti\0sltiu\0andi\0ori\0beq\0bne\0sll\0srl\0sra\0j\0jal\0jr\0lw\0lbu\0lhu\0ll\0sb\0sh\0sw\0sc\0lui\0\0mult\0multu\0div\0divu\0mfhi\0mflo\0"
+OpcodeInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 10, 11, 12, 13, 4, 5, 0, 1, 3, 2, 3, 0, 35, 36, 37, 48, 40, 41, 43, 56, 15, 0, 0, 0, 0, 0,0
+FunctInst: .word 32, 33, 34, 35, 36, 37, 39, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 25, 26, 27, 16, 17  
+TipoInst: .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
 
-#Tipo 1 - R
-
+#Tipo 1 - R ($rd, $rs, $rt)
+#Tipo 2 - I ($rt, $rs, Imm)
+#Tipo 3 - I ($rt, $rs, Label)
+#Tipo 4 - I ($rd, $rt, Imm)
+#Tipo 5 - J 
+#Tipo 6 (jr) - R ($rs)
+#Tipo 7 - I ($rt, Imm($rs) )
+#Tipo 8 (lui) - I ($t, Imm) 
+#Tipo 9 - R ($rs, $rt)
+#Tipo 10 (mfhi,mflo) - R ($rd)
 
 BufferLeitura: .space 4000
 Instrucao: .space 8
+NewLine: .asciiz "\n"
+Espaco: .asciiz " "
+Tab: .asciiz "\t"
 
 #Mensagens
 DigiteArquivoEntrada: .asciiz "Digite o arquivo que deseja realizar a leitura: "
 
 #Erros
 ErroLeituraArquivo: .asciiz "ERRO 1: O arquivo não pode ser lido."
+ErronoMnemonico: .asciiz "ERRO 2: Uma instrução não pode ser interpretada."
 
 #s0 - Endereço do arquivo de leitura de dados
 #s1 - Endereço do arquivo de gravação de dados
@@ -125,6 +137,9 @@ LerArquivoEntrada:
 		j LoopLeitura
 		
 	FimArquivo:
+		li $v0, 16	#Fecha arquivo de leitura
+		move $a0, $s0
+		syscall
 		jr $ra
 		
 EncontrarText:
@@ -190,6 +205,7 @@ InterpretadordeInstrucoes:
 	LoopInterpretador:
 		lbu $t1, 0($t0)
 		beq $t1, 58, NovaLabel			#Encontra ( : )
+		beq $t1, 46, NovaReferencia		#Encontra ( . )
 		beq $t1, 32, NovaInstrucao		#Encontra Espaço
 		beq $t1, 9, NovaInstrucao		#Encontra Tab
 		beq $t1, 0, FimInterpretador 		#Encontra NULL
@@ -209,7 +225,9 @@ InterpretadordeInstrucoes:
 			InicioInstrucao:
 				addi $t2, $t2, -1
 				lbu $t1, -1($t2)
+				beq $t1, 9, GravaPalavra
 				beq $t1, 10, GravaPalavra
+				beq $t1, 32, GravaPalavra
 				j InicioInstrucao
 			GravaPalavra:
 				la $t6, NomeInst 
@@ -246,9 +264,20 @@ InterpretadordeInstrucoes:
 				ProximoMnemonico:
 					lbu $t1, 0($t6)
 					addi $t6, $t6, 1
-					beq $t1, 0, TestaOutro
+					beq $t1, 0, VerificaFim
 					j ProximoMnemonico
 					
+					VerificaFim:
+						lbu $t1, 1($t6)
+						beq $t1, 0, ErroMnemonico
+						j TestaOutro
+					
+					ErroMnemonico:
+						li $v0, 4
+						la $a0, ErronoMnemonico
+						syscall
+						j SaidadeErro
+							
 					TestaOutro:
 						addi $t3, $t3, 1
 						la $t7, Instrucao
@@ -296,6 +325,15 @@ InterpretadordeInstrucoes:
 				addi $t0, $t0, 2
 				addi $t4, $t4, 1
 				j LoopInterpretador
+	
+		NovaReferencia:
+			lbu $t1, 0($t0)
+			addi $t0, $t0, 1
+			beq $t1, 10, FimNovaReferencia
+			j NovaReferencia
+			
+			FimNovaReferencia:
+				j LoopInterpretador
 				
 	FimInterpretador:
 		lw $ra, ($sp) 
@@ -303,8 +341,32 @@ InterpretadordeInstrucoes:
 		jr $ra
 
 TrataInstrucao:
+	#addi $sp, $sp, -4
+	#sw $ra, ($sp)
+	move $t1, $a0
+	#beq $t1, 1, Tipo1
+	
+		#Tipo1:
+		#	move $a0, $t0
+		#	jal ObtemRegistrador
+		#	beq $v0, -1, ErrodeSintaxe
+			
+		#mul $t1, $t1, 4
+	
+	mul $t1, $t1, 4
 	li $v0, 1
 	syscall
+	li $v0, 4
+	la $a0, Tab
+	syscall
+	li $v0, 1
+	lw $a0, TipoInst($t1)
+	syscall
+	li $v0, 4
+	la $a0, NewLine
+	syscall
+	#lb $ra, ($sp)
+	#addi $sp, $sp, 4
 	jr $ra
 
 SaidadeErro:
