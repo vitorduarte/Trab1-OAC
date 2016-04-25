@@ -18,6 +18,9 @@ TipoInst: .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5,
 #Tabela para registradores
 NomeRegistrador: .asciiz "zero\0at\0v0\0v1\0a0\0a1\0a2\0a3\0t0\0t1\0t2\0t3\0t4\0t5\0t6\0t7\0s0\0s1\0s2\0s3\0s4\0s5\0s6\0s7\0t8\0t9\0k0\0k1\0gp\0sp\0fp\0ra\0\0"
 
+#Tabela para conversão para hexadecimal
+CaractereHexa:	.byte	'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
+
 #Tipo 1 - R ($rd, $rs, $rt)
 #Tipo 2 - I ($rt, $rs, Imm)
 #Tipo 3 - I ($rt, $rs, Label)
@@ -36,6 +39,8 @@ Registrador: .space 8
 NewLine: .asciiz "\n"
 Espaco: .asciiz " "
 Tab: .asciiz "\t"
+InstrucaoHexa:	.byte	0,0,0,0,0,0,0,0,'\n'			# onde vai ser escrito a instrucao, ultimo byte \n
+
 
 #Endereço de leitura de registradores
 rs: .word 0
@@ -47,6 +52,7 @@ funct: .word 0
 imm: .word 0
 address: .word 0
 tipo: .word 0
+instrucao: .word 0
 
 #Mensagens
 DigiteArquivoEntrada: .asciiz "Digite o arquivo que deseja realizar a leitura: "
@@ -57,6 +63,7 @@ ErronoMnemonico: .asciiz "ERRO 2: Uma instrução não pode ser interpretada."
 ErronaSintaxe: .asciiz "ERRO 3: Erro na sintaxe, verifique os argumentos da instrução"
 ErronoRegistrador: .asciiz "ERRO 4: Erro na leitura dos registradores."
 ErronoText: .asciiz "ERRO 5: Referencia .text não encontrada"
+ErronaConversao: .asciiz "Erro 6: Erro na conversão para hexadecimal"
 
 #s0 - Endereço do arquivo de leitura de dados
 #s1 - Endereço do arquivo de gravação de dados
@@ -439,7 +446,7 @@ TrataInstrucao:
 				jal ObtemOpcode
 				jal ObtemShamt
 				jal ObtemFunct
-				#jal GeraHexa
+				jal GeraHex
 				j FimTrataInstrucao
 				
 			ErrodeSintaxe:
@@ -448,18 +455,6 @@ TrataInstrucao:
 				syscall
 				j SaidadeErro
 				
-	mul $t1, $t1, 4
-	li $v0, 1
-	syscall
-	li $v0, 4
-	la $a0, Tab
-	syscall
-	li $v0, 1
-	lw $a0, TipoInst($t1)
-	syscall
-	li $v0, 4
-	la $a0, NewLine
-	syscall
 	FimTrataInstrucao:
 		lw $ra, ($sp)
 		addi $sp, $sp, 4
@@ -543,6 +538,96 @@ ObtemFunct:
 	lw $t2, FunctInst($a0)
 	sw $t2, funct
 	jr $ra
+
+GeraHex:
+	addi $sp, $sp, -4
+	sw $ra, ($sp)
+	lw $t1, tipo
+	beq $t1, 1, HexTipo1
+	j ErrodeConversao
+
+	HexTipo1:
+		lw $t1, instrucao
+		move $t1, $zero
+		jal ArmazenaOp
+		jal ArmazenaRs
+		jal ArmazenaRt
+		jal ArmazenaRd
+		jal ArmazenaShamt
+		jal ArmazenaFunct
+		move $a0, $t1
+		jal ConverteHex
+		lw $ra, ($sp)
+		addi $sp, $sp, 4
+		jr $ra
+
+	ArmazenaOp:
+		lw $t2, opcode
+		bge $t2, 63, ErrodeConversao
+		sll $t2, $t2, 26	
+		add $t1, $t1, $t2
+		jr $ra
+	
+	ArmazenaRs:
+		lw $t2, rs
+		bge $t2, 32, ErrodeConversao
+		sll $t2, $t2, 21
+		add $t1, $t1, $t2
+		jr $ra
+
+	ArmazenaRt:
+		lw $t2, rt
+		bge $t2, 32, ErrodeConversao
+		sll $t2, $t2, 16
+		add $t1, $t1, $t2
+		jr $ra
+
+	ArmazenaRd:
+		lw $t2, rd
+		bge $t2, 32, ErrodeConversao
+		sll $t2, $t2, 11
+		add $t1, $t1, $t2
+		jr $ra
+	
+	ArmazenaShamt:
+		lw $t2, shamt
+		bge $t2, 32, ErrodeConversao
+		sll $t2, $t2, 6
+		add $t1, $t1, $t2
+		jr $ra
+
+	ArmazenaFunct:
+		lw $t2, funct
+		bge $t2, 64, ErrodeConversao
+		add $t1, $t1, $t2
+		jr $ra
+		
+	ErrodeConversao:
+		li $v0, 4
+		la $a0, ErronaConversao
+		syscall
+		j SaidadeErro
+
+ConverteHex:
+	li		$t1, 8			# numeros de bytes para converter
+	la		$t2, CaractereHexa		# endereco do vetor de caracteres
+	la		$t3,InstrucaoHexa+7		# endereco do InstrucaoHexa
+	
+	LoopConverteHex:	
+		andi		$t7,$a0,0xF			# mascaramento
+		add		$t8,$t2,$t7			# somar o valor do digito com o endereco de hexa para pegar o endereco do digito
+		lb		$t8,0($t8)			# pegar o valor ascci do digito
+		sb		$t8,0($t3)			# salvar o valor ascci no InstrucaoHexa
+		srl		$a0,$a0,4			# pegar os proximos 4 digitos da instrucao
+		addi		$t3,$t3,-1			# andar na posicao do InstrucaoHexa
+		addi		$t1,$t1,-1			# decrementar $t1 para saber que andou para o proximo digito
+		bne		$t1,$0, LoopConverteHex		# checar se tem mais digitos
+	
+	ImprimeTela:
+		la		$a0, InstrucaoHexa
+		li		$v0, 4			# mudar para escrever em arquivo
+		syscall
+		jr $ra
 
 SaidadeErro:
 	li $v0, 10
