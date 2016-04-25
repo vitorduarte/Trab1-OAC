@@ -8,11 +8,15 @@ NomeArquivoSaida: .asciiz "./out.txt"
 NomeLabel: .space 1000
 EnderecoLabel: .space 400	#Espaço para registrar endereço de  100 Labels
 
-#Instrucoes
-NomeInst: .ascii "add\0addu\0sub\0subu\0and\0or\0nor\0slt\0sltu\0addi\0addiu\0slti\0sltiu\0andi\0ori\0beq\0bne\0sll\0srl\0sra\0j\0jal\0jr\0lw\0lbu\0lhu\0ll\0sb\0sh\0sw\0sc\0lui\0\0mult\0multu\0div\0divu\0mfhi\0mflo\0"
+#Tabela para Instrucoes
+NomeInst: .ascii "add\0addu\0sub\0subu\0and\0or\0nor\0slt\0sltu\0addi\0addiu\0slti\0sltiu\0andi\0ori\0beq\0bne\0sll\0srl\0sra\0j\0jal\0jr\0lw\0lbu\0lhu\0ll\0sb\0sh\0sw\0sc\0lui\0\0mult\0multu\0div\0divu\0mfhi\0mflo\0\0"
 OpcodeInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 10, 11, 12, 13, 4, 5, 0, 1, 3, 2, 3, 0, 35, 36, 37, 48, 40, 41, 43, 56, 15, 0, 0, 0, 0, 0,0
+ShamtInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
 FunctInst: .word 32, 33, 34, 35, 36, 37, 39, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 25, 26, 27, 16, 17  
 TipoInst: .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
+
+#Tabela para registradores
+NomeRegistrador: .asciiz "zero\0at\0v0\0v1\0a0\0a1\0a2\0a3\0t0\0t1\0t2\0t3\0t4\0t5\0t6\0t7\0s0\0s1\0s2\0s3\0s4\0s5\0s6\0s7\0t8\0t9\0k0\0k1\0gp\0sp\0fp\0ra\0\0"
 
 #Tipo 1 - R ($rd, $rs, $rt)
 #Tipo 2 - I ($rt, $rs, Imm)
@@ -25,11 +29,24 @@ TipoInst: .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5,
 #Tipo 9 - R ($rs, $rt)
 #Tipo 10 (mfhi,mflo) - R ($rd)
 
+#Endereços auxiliares
 BufferLeitura: .space 4000
 Instrucao: .space 8
+Registrador: .space 8
 NewLine: .asciiz "\n"
 Espaco: .asciiz " "
 Tab: .asciiz "\t"
+
+#Endereço de leitura de registradores
+rs: .word 0
+rt: .word 0
+rd: .word 0
+opcode: .word 0
+shamt: .word 0
+funct: .word 0
+imm: .word 0
+address: .word 0
+tipo: .word 0
 
 #Mensagens
 DigiteArquivoEntrada: .asciiz "Digite o arquivo que deseja realizar a leitura: "
@@ -37,6 +54,9 @@ DigiteArquivoEntrada: .asciiz "Digite o arquivo que deseja realizar a leitura: "
 #Erros
 ErroLeituraArquivo: .asciiz "ERRO 1: O arquivo não pode ser lido."
 ErronoMnemonico: .asciiz "ERRO 2: Uma instrução não pode ser interpretada."
+ErronaSintaxe: .asciiz "ERRO 3: Erro na sintaxe, verifique os argumentos da instrução"
+ErronoRegistrador: .asciiz "ERRO 4: Erro na leitura dos registradores."
+ErronoText: .asciiz "ERRO 5: Referencia .text não encontrada"
 
 #s0 - Endereço do arquivo de leitura de dados
 #s1 - Endereço do arquivo de gravação de dados
@@ -147,55 +167,59 @@ EncontrarText:
 	LoopEncontraText:
 		EncontraPonto:
 			lbu $t1, 0($t0)
-			beq $t1, 0, FimdeLeitura	#Encontra NULL
+			beq $t1, 0, ErroText	#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 46, EncontraT1		#Encontrar o ponto ( .)
 			j LoopEncontraText
 			
 		EncontraT1:
 			lbu $t1, 0($t0)
-			beq $t1, 0, FimdeLeitura	#Encontra NULL
+			beq $t1, 0,  ErroText	#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 116, EncontraE		#Encontrar ( T )
 			j LoopEncontraText
 		
 		EncontraE:
 			lbu $t1, 0($t0)
-			beq $t1, 0, FimdeLeitura	#Encontra NULL
+			beq $t1, 0,  ErroText	#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 101, EncontraX 	#Encontrar ( E )
 			j LoopEncontraText
 		
 		EncontraX:
 			lbu $t1, 0($t0)
-			beq $t1, 0, FimdeLeitura	#Encontra NULL
+			beq $t1, 0,  ErroText	#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 120, EncontraT2	#Encontrar ( X )
 			j LoopEncontraText
 			
 		EncontraT2:
 			lbu $t1, 0($t0)
-			beq $t1, 0, FimdeLeitura	#Encontra NULL
+			beq $t1, 0,  ErroText	#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 116, EncontraFim 	#Encontrar ( T )
 			j LoopEncontraText
 			
 		EncontraFim:
 			lbu $t1, 0($t0)
-			beq $t1, 0, FimdeLeitura	#Encontra NULL
+			beq $t1, 0, TextEncontrado	#Encontra NULL
 			addi $t0, $t0, 1
-			beq $t1, 32, FimdeLeitura		#Encontra Espaço
-			beq $t1, 10, FimdeLeitura		#Encontra NewLine
-			beq $t1, 9, FimdeLeitura		#Encontra Tab	
+			beq $t1, 32, TextEncontrado		#Encontra Espaço
+			beq $t1, 10, TextEncontrado		#Encontra NewLine
+			beq $t1, 9, TextEncontrado		#Encontra Tab	
 			j LoopEncontraText
 
-	FimdeLeitura:
+	ErroText:
+		li $v0, 4
+		la $a0, ErronoText
+		j SaidadeErro
+	TextEncontrado:
 		move $s3, $t0
 		jr $ra
 
 InterpretadordeInstrucoes:
 	addi $sp, $sp, -4
-	sw $ra, 0($sp)
+	sw $ra, ($sp)
 	move $t0, $s3
 	li $s4, 0
 	la $t4, NomeLabel
@@ -308,6 +332,8 @@ InterpretadordeInstrucoes:
 				addi $t1, $t1, -1
 				lbu $t3, -1($t1)
 				beq $t3, 10, GravaLabel		#Encontra NewLine
+				beq $t3, 9, GravaLabel		#Encontra Tab
+				beq $t3, 32, GravaLabel		#Encontra Espaço
 				j IniciodaLabel
 			
 			GravaLabel:
@@ -336,23 +362,92 @@ InterpretadordeInstrucoes:
 				j LoopInterpretador
 				
 	FimInterpretador:
-		lw $ra, ($sp) 
+		lw $ra, ($sp)
 		addi $sp, $sp, 4
 		jr $ra
 
 TrataInstrucao:
-	#addi $sp, $sp, -4
-	#sw $ra, ($sp)
-	move $t1, $a0
-	#beq $t1, 1, Tipo1
+	#Recebe $a0 - Numero da instrução
+	addi $sp, $sp, -4
+	sw $ra, ($sp)
+	mul $t1, $a0, 4 
+	lw $t2, TipoInst($t1)
+	sw $t2, tipo
+	beq $t2, 1, Tipo1
 	
-		#Tipo1:
-		#	move $a0, $t0
-		#	jal ObtemRegistrador
-		#	beq $v0, -1, ErrodeSintaxe
+		Tipo1:
+			EncontraRd:
+				lbu $t2, ($t0)
+				addi $t0, $t0, 1
+				beq $t2, 32, EncontraRd		#Encontra espaço
+				beq $t2, 9, EncontraRd		#Encontra tab
+				beq $t2, 36, LerRd		#Encontra $
+				j ErrodeSintaxe
+				
+			LerRd:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rd
+				move $t0, $v1
+				j EncontraRs
 			
-		#mul $t1, $t1, 4
-	
+			EncontraRs:
+				VirgulaRs:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 9, VirgulaRs		#Encontra tab
+					beq $t2, 32, VirgulaRs		#Encontra espaço
+					bne $t2, 44, ErrodeSintaxe	#Encontra virgula
+				
+				CifraoRs:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 32, CifraoRs		#Encontra espaço
+					beq $t2, 9, CifraoRs		#Encontra tab
+					beq $t2, 36, LerRs		#Encontra $
+					j ErrodeSintaxe
+			LerRs:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rs
+				move $t0, $v1
+				j EncontraRt
+				
+			EncontraRt:
+				VirgulaRt:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 9, VirgulaRt		#Encontra tab
+					beq $t2, 32, VirgulaRt		#Encontra espaço
+					bne $t2, 44, ErrodeSintaxe	#Encontra virgula
+				
+				CifraoRt:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 32, CifraoRt		#Encontra espaço
+					beq $t2, 9, CifraoRt		#Encontra tab
+					beq $t2, 36, LerRt		#Encontra $
+					j ErrodeSintaxe
+			LerRt:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rt
+				move $t0, $v1
+			
+			DadosTipo1:
+				move $a0, $t1
+				jal ObtemOpcode
+				jal ObtemShamt
+				jal ObtemFunct
+				#jal GeraHexa
+				j FimTrataInstrucao
+				
+			ErrodeSintaxe:
+				li $v0, 4
+				la $a0, ErronaSintaxe
+				syscall
+				j SaidadeErro
+				
 	mul $t1, $t1, 4
 	li $v0, 1
 	syscall
@@ -365,8 +460,88 @@ TrataInstrucao:
 	li $v0, 4
 	la $a0, NewLine
 	syscall
-	#lb $ra, ($sp)
-	#addi $sp, $sp, 4
+	FimTrataInstrucao:
+		lw $ra, ($sp)
+		addi $sp, $sp, 4
+		jr $ra
+	
+ObtemRegistrador:
+	#Recebe $a0 - Endereço do começo do registrador
+	#Retorna $v0 - Valor do registrador lido
+		#Se não encontrado  $v0 = -1
+	#Retorna $v1  - Endereço do fim do registrador
+	la $t3, Registrador
+	SalvaRegistrador:
+		lbu $t2, 0($a0)
+		beq $t2, 32, RegistCompleto		#Encontra espaço
+		beq $t2, 9, RegistCompleto		#Encontra Tab
+		beq $t2, 44, RegistCompleto		#Encontra Vírgula
+		beq $t2, 10, RegistCompleto		#Encontra NewLine
+		beq $t2, 0, RegistCompleto		#Encontra Fim
+		sb  $t2, ($t3)
+		addi $a0, $a0, 1
+		addi $t3, $t3, 1
+		j SalvaRegistrador
+		
+		RegistCompleto:
+			move $v1, $a0
+			li $t2, 0
+			addi $t3, $t3, 1
+			sb $t2, ($t3)
+			j ComparaRegistrador
+	
+	ComparaRegistrador:
+		la $t2, Registrador
+		la $t3, NomeRegistrador
+		li $t9, 0
+		
+		LoopComparaRegist:
+			lbu $t7, ($t2)
+			lbu $t8, ($t3)
+			bne $t7, $t8, ProximoRegist
+			beq $t7, 0, RegistEncontrado
+			addi $t2, $t2, 1
+			addi $t3, $t3, 1
+			j LoopComparaRegist
+			
+			ProximoRegist:
+				lbu $t7, ($t3)
+				addi $t3, $t3, 1
+				beq $t7, 0, VerificaFimComparacao
+				j ProximoRegist
+				
+				VerificaFimComparacao:
+					lbu $t7, ($t3)
+					beq $t7, 0, RegistInvalido
+					j TestaOutroRegist
+				
+				TestaOutroRegist:
+					addi $t9, $t9, 1
+					la $t2, Registrador
+					j LoopComparaRegist
+					
+		RegistInvalido:
+			li $v0, 4
+			la $a0, ErronoRegistrador
+			syscall
+			j SaidadeErro
+		
+		RegistEncontrado:
+			move $v0, $t9
+			jr $ra
+
+ObtemOpcode:
+	lw $t2, OpcodeInst($a0)
+	sw $t2, opcode
+	jr $ra
+	
+ObtemShamt:
+	lw $t2, ShamtInst($a0)
+	sw $t2, shamt
+	jr $ra
+ObtemFunct:
+	lw $t2, FunctInst($a0)
+	sw $t2, funct
 	jr $ra
 
 SaidadeErro:
