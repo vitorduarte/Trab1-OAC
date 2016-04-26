@@ -17,4 +17,9 @@ andi $t2, $t5, 5
 ori $t4, $t5, 21
 jr $ra
 lui $t1, 21
+mult $t1, $t6
+multu $a0, $v1
+div $a1, $t5
+divu $a1, $t3
+
 

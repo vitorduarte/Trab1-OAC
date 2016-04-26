@@ -11,7 +11,7 @@ EnderecoLabel: .space 400	#Espaço para registrar endereço de  100 Labels
 #Tabela para Instrucoes
 NomeInst: .ascii "add\0addu\0sub\0subu\0and\0or\0nor\0slt\0sltu\0addi\0addiu\0slti\0sltiu\0andi\0ori\0beq\0bne\0sll\0srl\0sra\0j\0jal\0jr\0lw\0lbu\0lhu\0ll\0sb\0sh\0sw\0sc\0lui\0mult\0multu\0div\0divu\0mfhi\0mflo\0\0"
 OpcodeInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 10, 11, 12, 13, 4, 5, 0, 1, 3, 2, 3, 0, 35, 36, 37, 48, 40, 41, 43, 56, 15, 0, 0, 0, 0, 0,0
-ShamtInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 4, 4, 4, 5,5, 0, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
+ShamtInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 4, 4, 4, 5,5, 0, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 0, 0, 0, 10, 10
 FunctInst: .word 32, 33, 34, 35, 36, 37, 39, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 25, 26, 27, 16, 17  
 TipoInst: .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
 
@@ -413,6 +413,7 @@ TrataInstrucao:
 	beq $t2, 2, Tipo2
 	beq $t2, 6, Tipo6
 	beq $t2, 8, Tipo8
+	beq $t2, 9, Tipo9
 	j InstrucaonaoSuportada
 	
 		Tipo1:
@@ -478,7 +479,7 @@ TrataInstrucao:
 				move $a0, $t1
 				jal ObtemOpcode
 				move $a0, $t1
-				jal ObtemShamt
+				sw $zero, shamt
 				move $a0, $t1
 				jal ObtemFunct
 				jal GeraHex
@@ -565,7 +566,7 @@ TrataInstrucao:
 				move $a0, $t1
 				jal ObtemOpcode
 				move $a0, $t1
-				jal ObtemShamt
+				sw $zero, shamt
 				move $a0, $t1
 				jal ObtemFunct
 				sw $zero, rt
@@ -611,6 +612,56 @@ TrataInstrucao:
 				jal GeraHex
 				jal GravaInstrucao
 				j FimTrataInstrucao
+		
+		Tipo9:
+			EncontraRs9:
+				lbu $t2, ($t0)
+				addi $t0, $t0, 1
+				beq $t2, 32, EncontraRs9	#Encontra espaço
+				beq $t2, 9, EncontraRs9		#Encontra tab
+				beq $t2, 36, LerRs9		#Encontra $
+				j ErrodeSintaxe
+				
+			LerRs9:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rs
+				move $t0, $v1
+				j EncontraRt9
+				
+			EncontraRt9:
+				VirgulaRt9:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 9, VirgulaRt9		#Encontra tab
+					beq $t2, 32, VirgulaRt9		#Encontra espaço
+					bne $t2, 44, ErrodeSintaxe	#Encontra virgula
+				
+				CifraoRt9:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 32, CifraoRt9		#Encontra espaço
+					beq $t2, 9, CifraoRt9		#Encontra tab
+					beq $t2, 36, LerRt9		#Encontra $
+					j ErrodeSintaxe
+			LerRt9:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rt
+				move $t0, $v1
+				
+			DadosTipo9:
+				move $a0, $t1
+				jal ObtemOpcode
+				move $a0, $t1
+				sw $zero, shamt
+				move $a0, $t1
+				jal ObtemFunct
+				sw $zero, rd
+				jal GeraHex
+				jal GravaInstrucao
+				j FimTrataInstrucao
+			
 			
 					
 				
@@ -769,6 +820,7 @@ GeraHex:
 	beq $t1, 2, HexTipoI
 	beq $t1, 6, HexTipoR
 	beq $t1, 8, HexTipoI
+	beq $t1, 9, HexTipoR
 	j ErrodeConversao
 
 	HexTipoR:
