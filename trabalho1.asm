@@ -11,7 +11,7 @@ EnderecoLabel: .space 400	#Espaço para registrar endereço de  100 Labels
 #Tabela para Instrucoes
 NomeInst: .ascii "add\0addu\0sub\0subu\0and\0or\0nor\0slt\0sltu\0addi\0addiu\0slti\0sltiu\0andi\0ori\0beq\0bne\0sll\0srl\0sra\0j\0jal\0jr\0lw\0lbu\0lhu\0ll\0sb\0sh\0sw\0sc\0lui\0\0mult\0multu\0div\0divu\0mfhi\0mflo\0\0"
 OpcodeInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 10, 11, 12, 13, 4, 5, 0, 1, 3, 2, 3, 0, 35, 36, 37, 48, 40, 41, 43, 56, 15, 0, 0, 0, 0, 0,0
-ShamtInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
+ShamtInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
 FunctInst: .word 32, 33, 34, 35, 36, 37, 39, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 25, 26, 27, 16, 17  
 TipoInst: .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
 
@@ -65,6 +65,7 @@ ErronoRegistrador: .asciiz "ERRO 4: Erro na leitura dos registradores."
 ErronoText: .asciiz "ERRO 5: Referencia .text não encontrada"
 ErronaConversao: .asciiz "Erro 6: Erro na conversão para hexadecimal"
 ErronaCriacaoArquivo: .asciiz "Erro 7: Erro na criação do arquivo de gravação de dados"
+ErronaLeituraImm: .asciiz "Erro 8: Erro na leitura do imediato"
 
 #s0 - Endereço do arquivo de leitura de dados
 #s1 - Endereço do arquivo de gravação de dados
@@ -408,61 +409,62 @@ TrataInstrucao:
 	lw $t2, TipoInst($t1)
 	sw $t2, tipo
 	beq $t2, 1, Tipo1
+	beq $t2, 2, Tipo2
 	
 		Tipo1:
-			EncontraRd:
+			EncontraRd1:
 				lbu $t2, ($t0)
 				addi $t0, $t0, 1
-				beq $t2, 32, EncontraRd		#Encontra espaço
-				beq $t2, 9, EncontraRd		#Encontra tab
-				beq $t2, 36, LerRd		#Encontra $
+				beq $t2, 32, EncontraRd1		#Encontra espaço
+				beq $t2, 9, EncontraRd1		#Encontra tab
+				beq $t2, 36, LerRd1		#Encontra $
 				j ErrodeSintaxe
 				
-			LerRd:
+			LerRd1:
 				move $a0, $t0
 				jal ObtemRegistrador
 				sw $v0, rd
 				move $t0, $v1
-				j EncontraRs
+				j EncontraRs1
 			
-			EncontraRs:
-				VirgulaRs:
+			EncontraRs1:
+				VirgulaRs1:
 					lbu $t2, ($t0)
 					addi $t0, $t0, 1
-					beq $t2, 9, VirgulaRs		#Encontra tab
-					beq $t2, 32, VirgulaRs		#Encontra espaço
+					beq $t2, 9, VirgulaRs1		#Encontra tab
+					beq $t2, 32, VirgulaRs1		#Encontra espaço
 					bne $t2, 44, ErrodeSintaxe	#Encontra virgula
 				
-				CifraoRs:
+				CifraoRs1:
 					lbu $t2, ($t0)
 					addi $t0, $t0, 1
-					beq $t2, 32, CifraoRs		#Encontra espaço
-					beq $t2, 9, CifraoRs		#Encontra tab
-					beq $t2, 36, LerRs		#Encontra $
+					beq $t2, 32, CifraoRs1		#Encontra espaço
+					beq $t2, 9, CifraoRs1		#Encontra tab
+					beq $t2, 36, LerRs1		#Encontra $
 					j ErrodeSintaxe
-			LerRs:
+			LerRs1:
 				move $a0, $t0
 				jal ObtemRegistrador
 				sw $v0, rs
 				move $t0, $v1
-				j EncontraRt
+				j EncontraRt1
 				
-			EncontraRt:
-				VirgulaRt:
+			EncontraRt1:
+				VirgulaRt1:
 					lbu $t2, ($t0)
 					addi $t0, $t0, 1
-					beq $t2, 9, VirgulaRt		#Encontra tab
-					beq $t2, 32, VirgulaRt		#Encontra espaço
+					beq $t2, 9, VirgulaRt1		#Encontra tab
+					beq $t2, 32, VirgulaRt1		#Encontra espaço
 					bne $t2, 44, ErrodeSintaxe	#Encontra virgula
 				
-				CifraoRt:
+				CifraoRt1:
 					lbu $t2, ($t0)
 					addi $t0, $t0, 1
-					beq $t2, 32, CifraoRt		#Encontra espaço
-					beq $t2, 9, CifraoRt		#Encontra tab
-					beq $t2, 36, LerRt		#Encontra $
+					beq $t2, 32, CifraoRt1		#Encontra espaço
+					beq $t2, 9, CifraoRt1		#Encontra tab
+					beq $t2, 36, LerRt1		#Encontra $
 					j ErrodeSintaxe
-			LerRt:
+			LerRt1:
 				move $a0, $t0
 				jal ObtemRegistrador
 				sw $v0, rt
@@ -471,11 +473,74 @@ TrataInstrucao:
 			DadosTipo1:
 				move $a0, $t1
 				jal ObtemOpcode
+				move $a0, $t1
 				jal ObtemShamt
+				move $a0, $t1
 				jal ObtemFunct
 				jal GeraHex
 				jal GravaInstrucao
 				j FimTrataInstrucao
+				
+		Tipo2:
+			EncontraRt2:
+				lbu $t2, ($t0)
+				addi $t0, $t0, 1
+				beq $t2, 32, EncontraRt2	#Encontra espaço
+				beq $t2, 9, EncontraRt2		#Encontra tab
+				beq $t2, 36, LerRt2		#Encontra $
+				j ErrodeSintaxe
+				
+			LerRt2:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rt
+				move $t0, $v1
+				j EncontraRs2
+			
+			EncontraRs2:
+				VirgulaRs2:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 9, VirgulaRs2		#Encontra tab
+					beq $t2, 32, VirgulaRs2		#Encontra espaço
+					bne $t2, 44, ErrodeSintaxe	#Encontra virgula
+				
+				CifraoRs2:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 32, CifraoRs2		#Encontra espaço
+					beq $t2, 9, CifraoRs2		#Encontra tab
+					beq $t2, 36, LerRs2		#Encontra $
+					j ErrodeSintaxe
+					
+			LerRs2:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rs
+				move $t0, $v1
+				j EncontraImm2
+				
+			EncontraImm2:
+				VirgulaImm2:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 9, VirgulaImm2		#Encontra tab
+					beq $t2, 32, VirgulaImm2	#Encontra espaço
+					bne $t2, 44, ErrodeSintaxe	#Encontra virgula
+				
+				LerImm2:
+					move $a0, $t0
+					jal ObtemImediato
+					sw $v0, imm
+					move $t0, $v1
+					
+				DadosTipo2:
+					move $a0, $t1
+					jal ObtemOpcode
+					jal GeraHex
+					jal GravaInstrucao
+					j FimTrataInstrucao
+					
 				
 		ErrodeSintaxe:
 			li $v0, 4
@@ -491,7 +556,6 @@ TrataInstrucao:
 ObtemRegistrador:
 	#Recebe $a0 - Endereço do começo do registrador
 	#Retorna $v0 - Valor do registrador lido
-		#Se não encontrado  $v0 = -1
 	#Retorna $v1  - Endereço do fim do registrador
 	la $t3, Registrador
 	SalvaRegistrador:
@@ -552,9 +616,70 @@ ObtemRegistrador:
 		RegistEncontrado:
 			move $v0, $t9
 			jr $ra
+			
+ObtemImediato:
+	#Recebe $a0 - Endereço do começo do imediato
+	#Retorna $v0 - Valor lido
+	#Retorna $v1  - Endereço do fim do imediato
+	move $t2, $zero
+	move $t9, $zero
+	li $t8, 1
+	
+	LoopObtemImediato:
+		lb $t7, ($a0)
+		addi $a0, $a0, 1
+		beq $t7, 32, LoopObtemImediato		#Verifica Espaço
+		beq $t7, 9, LoopObtemImediato		#Verifica Tab
+		bltu $t7, 48, ImmInvalido
+		bgtu $t7, 58, ImmInvalido
+		addi $a0, $a0, -1
+		j ObtemFimImediato
+		
+		ImmInvalido:
+			li $v0, 4
+			la $a0, ErronaLeituraImm
+			syscall
+			j SaidadeErro
+		
+		ObtemFimImediato:
+			lb $t7, ($a0)
+			addi $a0, $a0, 1
+			addi $t2, $t2, 1
+			beq $t7, 32, CalculoImediato	#Verifica Espaço
+			beq $t7, 9, CalculoImediato	#Verifica Tab
+			beq $t7, 10, CalculoImediato	#Verifica NewLine
+			beq $t7, 0, CalculoImediato	#Verifica final do arquivo
+			bltu $t7, 48, ImmInvalido
+			bgtu $t7, 58, ImmInvalido
+			j ObtemFimImediato
+			
+	CalculoImediato:
+		addi $a0, $a0, -2			#Volta para o local do digito das unidades
+		move $v1, $a0				#Retorna o endereço do fim do mnemonico
+		
+		LoopCalculoImediato:
+			lb $t7, ($a0)
+			beq $t2, 1, FimCalculo 		#Verifica fim da leitura
+			addi $t7, $t7, -48		#Converte de ascii para valor numerico
+			mul $t7, $t7, $t8
+			mul $t8, $t8, 10 
+			addi $a0, $a0, -1
+			addi $t2, $t2, -1
+			add $t9, $t9, $t7
+			j LoopCalculoImediato
+			
+		FimCalculo:
+			move $v0, $t9
+			jr $ra
 
 ObtemOpcode:
 	lw $t2, OpcodeInst($a0)
+	li $v0, 1
+	move $a0, $t2
+	syscall
+	li $v0, 4
+	la $a0, Tab
+	syscall
 	sw $t2, opcode
 	jr $ra
 	
@@ -572,6 +697,7 @@ GeraHex:
 	sw $ra, ($sp)
 	lw $t1, tipo
 	beq $t1, 1, HexTipo1
+	beq $t1, 2, HexTipo2
 	j ErrodeConversao
 
 	HexTipo1:
@@ -588,53 +714,78 @@ GeraHex:
 		lw $ra, ($sp)
 		addi $sp, $sp, 4
 		jr $ra
-
-	ArmazenaOp:
-		lw $t2, opcode
-		bge $t2, 63, ErrodeConversao
-		sll $t2, $t2, 26	
-		add $t1, $t1, $t2
-		jr $ra
-	
-	ArmazenaRs:
-		lw $t2, rs
-		bge $t2, 32, ErrodeConversao
-		sll $t2, $t2, 21
-		add $t1, $t1, $t2
-		jr $ra
-
-	ArmazenaRt:
-		lw $t2, rt
-		bge $t2, 32, ErrodeConversao
-		sll $t2, $t2, 16
-		add $t1, $t1, $t2
-		jr $ra
-
-	ArmazenaRd:
-		lw $t2, rd
-		bge $t2, 32, ErrodeConversao
-		sll $t2, $t2, 11
-		add $t1, $t1, $t2
-		jr $ra
-	
-	ArmazenaShamt:
-		lw $t2, shamt
-		bge $t2, 32, ErrodeConversao
-		sll $t2, $t2, 6
-		add $t1, $t1, $t2
-		jr $ra
-
-	ArmazenaFunct:
-		lw $t2, funct
-		bge $t2, 64, ErrodeConversao
-		add $t1, $t1, $t2
-		jr $ra
 		
-	ErrodeConversao:
-		li $v0, 4
-		la $a0, ErronaConversao
-		syscall
-		j SaidadeErro
+	HexTipo2:
+		lw $t1, instrucao
+		move $t1, $zero
+		jal ArmazenaOp	
+		jal ArmazenaRs
+		jal ArmazenaRt
+		jal ArmazenaImm
+		move $a0, $t1
+		jal ConverteHex
+		lw $ra, ($sp)
+		addi $sp, $sp, 4
+		jr $ra
+
+ArmazenaOp:
+	lw $t2, opcode
+	bge $t2, 63, ErrodeConversao
+	sll $t2, $t2, 26	
+	add $t1, $t1, $t2
+	li $v0, 1
+	move $a0, $t2
+	syscall
+	li $v0, 4
+	la $a0, Tab
+	syscall
+	jr $ra
+	
+ArmazenaRs:
+	lw $t2, rs
+	bge $t2, 32, ErrodeConversao
+	sll $t2, $t2, 21
+	add $t1, $t1, $t2
+	jr $ra
+
+ArmazenaRt:
+	lw $t2, rt
+	bge $t2, 32, ErrodeConversao
+	sll $t2, $t2, 16
+	add $t1, $t1, $t2
+	jr $ra
+
+ArmazenaRd:
+	lw $t2, rd
+	bge $t2, 32, ErrodeConversao
+	sll $t2, $t2, 11
+	add $t1, $t1, $t2
+	jr $ra
+	
+ArmazenaShamt:
+	lw $t2, shamt
+	bge $t2, 32, ErrodeConversao
+	sll $t2, $t2, 6
+	add $t1, $t1, $t2
+	jr $ra
+
+ArmazenaFunct:
+	lw $t2, funct
+	bge $t2, 64, ErrodeConversao
+	add $t1, $t1, $t2
+	jr $ra
+	
+ArmazenaImm:
+	lw $t2, imm
+	bge $t2, 0xFFFF, ErrodeConversao	#Verifica valor maximo do imediato
+	add $t1, $t1, $t2
+	jr $ra
+	
+ErrodeConversao:
+	li $v0, 4
+	la $a0, ErronaConversao
+	syscall
+	j SaidadeErro
 
 ConverteHex:
 	li		$t1, 8			# numeros de bytes para converter
