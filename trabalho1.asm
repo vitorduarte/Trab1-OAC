@@ -9,9 +9,9 @@ NomeLabel: .space 1000
 EnderecoLabel: .space 400	#Espaço para registrar endereço de  100 Labels
 
 #Tabela para Instrucoes
-NomeInst: .ascii "add\0addu\0sub\0subu\0and\0or\0nor\0slt\0sltu\0addi\0addiu\0slti\0sltiu\0andi\0ori\0beq\0bne\0sll\0srl\0sra\0j\0jal\0jr\0lw\0lbu\0lhu\0ll\0sb\0sh\0sw\0sc\0lui\0\0mult\0multu\0div\0divu\0mfhi\0mflo\0\0"
+NomeInst: .ascii "add\0addu\0sub\0subu\0and\0or\0nor\0slt\0sltu\0addi\0addiu\0slti\0sltiu\0andi\0ori\0beq\0bne\0sll\0srl\0sra\0j\0jal\0jr\0lw\0lbu\0lhu\0ll\0sb\0sh\0sw\0sc\0lui\0mult\0multu\0div\0divu\0mfhi\0mflo\0\0"
 OpcodeInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 10, 11, 12, 13, 4, 5, 0, 1, 3, 2, 3, 0, 35, 36, 37, 48, 40, 41, 43, 56, 15, 0, 0, 0, 0, 0,0
-ShamtInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
+ShamtInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 4, 4, 4, 5,5, 0, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
 FunctInst: .word 32, 33, 34, 35, 36, 37, 39, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 25, 26, 27, 16, 17  
 TipoInst: .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
 
@@ -63,9 +63,10 @@ ErronoMnemonico: .asciiz "ERRO 2: Uma instrução não pode ser interpretada."
 ErronaSintaxe: .asciiz "ERRO 3: Erro na sintaxe, verifique os argumentos da instrução"
 ErronoRegistrador: .asciiz "ERRO 4: Erro na leitura dos registradores."
 ErronoText: .asciiz "ERRO 5: Referencia .text não encontrada"
-ErronaConversao: .asciiz "Erro 6: Erro na conversão para hexadecimal"
-ErronaCriacaoArquivo: .asciiz "Erro 7: Erro na criação do arquivo de gravação de dados"
-ErronaLeituraImm: .asciiz "Erro 8: Erro na leitura do imediato"
+ErronaConversao: .asciiz "ERRO 6: Erro na conversão para hexadecimal"
+ErronaCriacaoArquivo: .asciiz "ERRO 7: Erro na criação do arquivo de gravação de dados"
+ErronaLeituraImm: .asciiz "ERRO 8: Erro na leitura do imediato"
+ErronnotipoInstrucao: .asciiz "ERRO 9: Essa instrução ainda não é suportada pelo nosso montador"
 
 #s0 - Endereço do arquivo de leitura de dados
 #s1 - Endereço do arquivo de gravação de dados
@@ -327,7 +328,7 @@ InterpretadordeInstrucoes:
 					j ProximoMnemonico
 					
 					VerificaFim:
-						lbu $t1, 1($t6)
+						lbu $t1, 0($t6)
 						beq $t1, 0, ErroMnemonico
 						j TestaOutro
 					
@@ -410,6 +411,9 @@ TrataInstrucao:
 	sw $t2, tipo
 	beq $t2, 1, Tipo1
 	beq $t2, 2, Tipo2
+	beq $t2, 6, Tipo6
+	beq $t2, 8, Tipo8
+	j InstrucaonaoSuportada
 	
 		Tipo1:
 			EncontraRd1:
@@ -534,12 +538,80 @@ TrataInstrucao:
 					sw $v0, imm
 					move $t0, $v1
 					
-				DadosTipo2:
-					move $a0, $t1
-					jal ObtemOpcode
-					jal GeraHex
-					jal GravaInstrucao
-					j FimTrataInstrucao
+			DadosTipo2:
+				move $a0, $t1
+				jal ObtemOpcode
+				jal GeraHex
+				jal GravaInstrucao
+				j FimTrataInstrucao
+					
+			
+		Tipo6:
+			EncontraRs6:
+				lbu $t2, ($t0)
+				addi $t0, $t0, 1
+				beq $t2, 32, EncontraRs6	#Encontra espaço
+				beq $t2, 9, EncontraRs6		#Encontra tab
+				beq $t2, 36, LerRs6		#Encontra $
+				j ErrodeSintaxe
+			
+			LerRs6:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rs
+				move $t0, $v1
+			
+			DadosTipo6:
+				move $a0, $t1
+				jal ObtemOpcode
+				move $a0, $t1
+				jal ObtemShamt
+				move $a0, $t1
+				jal ObtemFunct
+				sw $zero, rt
+				sw $zero, rd
+				jal GeraHex
+				jal GravaInstrucao
+				j FimTrataInstrucao
+		
+		Tipo8:
+			EncontraRt8:
+				lbu $t2, ($t0)
+				addi $t0, $t0, 1
+				beq $t2, 32, EncontraRt8	#Encontra espaço
+				beq $t2, 9, EncontraRt8		#Encontra tab
+				beq $t2, 36, LerRt8		#Encontra $
+				j ErrodeSintaxe
+				
+			LerRt8:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rt
+				move $t0, $v1
+				j EncontraImm8
+			
+			EncontraImm8:
+				VirgulaImm8:
+					lbu $t2, ($t0)
+					addi $t0, $t0, 1
+					beq $t2, 9, VirgulaImm8		#Encontra tab
+					beq $t2, 32, VirgulaImm8	#Encontra espaço
+					bne $t2, 44, ErrodeSintaxe	#Encontra virgula
+				
+				LerImm8:
+					move $a0, $t0
+					jal ObtemImediato
+					sw $v0, imm
+					move $t0, $v1
+					
+			DadosTipo8:
+				move $a0, $t1
+				jal ObtemOpcode
+				sw $zero, rs
+				jal GeraHex
+				jal GravaInstrucao
+				j FimTrataInstrucao
+			
 					
 				
 		ErrodeSintaxe:
@@ -552,7 +624,10 @@ TrataInstrucao:
 		lw $ra, ($sp)
 		addi $sp, $sp, 4
 		jr $ra
-	
+
+InstrucaonaoSuportada:
+	li $v0, 4
+	la $a0, ErronnotipoInstrucao
 ObtemRegistrador:
 	#Recebe $a0 - Endereço do começo do registrador
 	#Retorna $v0 - Valor do registrador lido
@@ -674,12 +749,6 @@ ObtemImediato:
 
 ObtemOpcode:
 	lw $t2, OpcodeInst($a0)
-	li $v0, 1
-	move $a0, $t2
-	syscall
-	li $v0, 4
-	la $a0, Tab
-	syscall
 	sw $t2, opcode
 	jr $ra
 	
@@ -696,11 +765,13 @@ GeraHex:
 	addi $sp, $sp, -4
 	sw $ra, ($sp)
 	lw $t1, tipo
-	beq $t1, 1, HexTipo1
-	beq $t1, 2, HexTipo2
+	beq $t1, 1, HexTipoR
+	beq $t1, 2, HexTipoI
+	beq $t1, 6, HexTipoR
+	beq $t1, 8, HexTipoI
 	j ErrodeConversao
 
-	HexTipo1:
+	HexTipoR:
 		lw $t1, instrucao
 		move $t1, $zero
 		jal ArmazenaOp
@@ -715,7 +786,7 @@ GeraHex:
 		addi $sp, $sp, 4
 		jr $ra
 		
-	HexTipo2:
+	HexTipoI:
 		lw $t1, instrucao
 		move $t1, $zero
 		jal ArmazenaOp	
@@ -733,12 +804,6 @@ ArmazenaOp:
 	bge $t2, 63, ErrodeConversao
 	sll $t2, $t2, 26	
 	add $t1, $t1, $t2
-	li $v0, 1
-	move $a0, $t2
-	syscall
-	li $v0, 4
-	la $a0, Tab
-	syscall
 	jr $ra
 	
 ArmazenaRs:
