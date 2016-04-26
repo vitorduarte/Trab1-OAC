@@ -1,7 +1,4 @@
 .text
-label1:
-label2:
-.text
         label4:
     add $t1,  $t2, $t3
         addu $s1,  $t2, $t6

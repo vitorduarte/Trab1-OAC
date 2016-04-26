@@ -2,7 +2,7 @@
 
 #Manipulação de Arquivos
 ArquivoEntrada: .space 150
-NomeArquivoSaida: .asciiz "./out.txt"
+NomeArquivoSaida: .asciiz "out.s"
 
 #Label
 NomeLabel: .space 1000
@@ -64,6 +64,7 @@ ErronaSintaxe: .asciiz "ERRO 3: Erro na sintaxe, verifique os argumentos da inst
 ErronoRegistrador: .asciiz "ERRO 4: Erro na leitura dos registradores."
 ErronoText: .asciiz "ERRO 5: Referencia .text não encontrada"
 ErronaConversao: .asciiz "Erro 6: Erro na conversão para hexadecimal"
+ErronaCriacaoArquivo: .asciiz "Erro 7: Erro na criação do arquivo de gravação de dados"
 
 #s0 - Endereço do arquivo de leitura de dados
 #s1 - Endereço do arquivo de gravação de dados
@@ -78,8 +79,10 @@ Main:
 	jal NomeArquivodeEntrada
 	jal AbrirArquivodeEntrada
 	jal LerArquivoEntrada
+	jal CriarArquivodeSaida
 	jal EncontrarText
 	jal InterpretadordeInstrucoes
+	jal FechaArquivodeSaida
 	j Sair
 		
 NomeArquivodeEntrada:
@@ -168,7 +171,31 @@ LerArquivoEntrada:
 		move $a0, $s0
 		syscall
 		jr $ra
+
+CriarArquivodeSaida:
+	li $v0, 13
+	la $a0, NomeArquivoSaida
+	li $a1, 1			#Escrita
+	li $a2, 0
+	syscall
+	
+	beq $v0, -1, ErroCriacaoArquivo
+	move $s1, $v0			#Endereço do arquivo lido
+	jr $ra
+	
+	ErroCriacaoArquivo:
+		li $v0, 4
+		la $a0, ErronaCriacaoArquivo
+		syscall
+		j SaidadeErro
 		
+FechaArquivodeSaida:
+	li $v0, 16
+	move $a0, $s1
+	syscall
+	jr $ra
+	
+				
 EncontrarText:
 	move $t0, $s2
 	LoopEncontraText:
@@ -447,13 +474,14 @@ TrataInstrucao:
 				jal ObtemShamt
 				jal ObtemFunct
 				jal GeraHex
+				jal GravaInstrucao
 				j FimTrataInstrucao
 				
-			ErrodeSintaxe:
-				li $v0, 4
-				la $a0, ErronaSintaxe
-				syscall
-				j SaidadeErro
+		ErrodeSintaxe:
+			li $v0, 4
+			la $a0, ErronaSintaxe
+			syscall
+			j SaidadeErro
 				
 	FimTrataInstrucao:
 		lw $ra, ($sp)
@@ -628,6 +656,14 @@ ConverteHex:
 		li		$v0, 4			# mudar para escrever em arquivo
 		syscall
 		jr $ra
+		
+GravaInstrucao:
+	li $v0, 15
+	move $a0, $s1
+	la $a1, InstrucaoHexa($zero)
+	la $a2, 9
+	syscall
+	jr $ra
 
 SaidadeErro:
 	li $v0, 10
