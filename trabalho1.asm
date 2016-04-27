@@ -90,6 +90,7 @@ Main:
 	jal LerArquivoEntrada
 	jal CriarArquivodeSaida
 	jal EncontrarText
+	jal ArmazenadordeLabel
 	jal InterpretadordeInstrucoes
 	jal FechaArquivodeSaida
 	j Sair
@@ -260,11 +261,93 @@ EncontrarText:
 		move $s3, $t0
 		jr $ra
 
-InterpretadordeInstrucoes:
+ArmazenadordeLabel:
 	addi $sp, $sp, -4
 	sw $ra, ($sp)
 	move $t0, $s3
 	li $s4, 0
+	la $t4, NomeLabel
+	la $t5, EnderecoLabel
+	la $t6, NomeInst 
+	
+	LoopArmazenadordeLabel:
+		lbu $t1, 0($t0)
+		beq $t1, 58, ContaLabel			#Encontra ( : )
+		beq $t1, 46, ContaReferencia		#Encontra ( . )
+		beq $t1, 32, ContaInstrucao		#Encontra Espaço
+		beq $t1, 9, ContaInstrucao		#Encontra Tab
+		beq $t1, 0, FimArmazenadordeLabel	#Encontra NULL
+		addi $t0, $t0, 1
+		j LoopArmazenadordeLabel
+		
+		
+		ContaInstrucao:
+			VerificaInstrucao:
+				lbu $t1, -1($t0)
+				addi $t0, $t0, 1
+				beq $t1, 10, LoopArmazenadordeLabel	#Encontra Newline
+				beq $t1, 32, LoopArmazenadordeLabel	#Encontra Espaço
+				beq $t1, 9, LoopArmazenadordeLabel	#Encontra Tab
+
+			LoopPulaLinha:
+				lbu $t1, 0($t0)
+				addi $t0, $t0, 1
+				beq $t1, 10, FimContaInstrucao
+				j LoopPulaLinha
+			
+			FimContaInstrucao:
+				addi $s4, $s4, 1
+				j LoopArmazenadordeLabel
+		
+		ContaLabel:
+			sw $s4, 0($t5)			#Grava endereço correspondente a Label encontrada
+			addi $t5, $t5, 4 
+			move $t1, $t0
+			move $t2, $t0
+			addi $t2, $t2, -1
+			
+			IniciodaLabel0:
+				addi $t1, $t1, -1
+				lbu $t3, -1($t1)
+				beq $t3, 10, GravaLabel0		#Encontra NewLine
+				beq $t3, 9, GravaLabel0		#Encontra Tab
+				beq $t3, 32, GravaLabel0		#Encontra Espaço
+				j IniciodaLabel0
+			
+			GravaLabel0:
+				lbu $t3, 0($t1)
+				sb $t3, 0($t4)
+				beq $t1, $t2, FimNovaLabel0
+				addi $t1, $t1, 1
+				addi $t4, $t4, 1
+				j GravaLabel0
+			
+			FimNovaLabel0:
+				lui $t3, 0
+				addi $t4, $t4, 1
+				sb $t3, 0($t4)
+				addi $t0, $t0, 2
+				addi $t4, $t4, 1
+				j LoopArmazenadordeLabel
+	
+		ContaReferencia:
+			lbu $t1, 0($t0)
+			addi $t0, $t0, 1
+			beq $t1, 10, FimContaReferencia
+			j ContaReferencia
+			
+			FimContaReferencia:
+				j LoopArmazenadordeLabel
+				
+	FimArmazenadordeLabel:
+		lw $ra, ($sp)
+		addi $sp, $sp, 4
+		jr $ra
+
+InterpretadordeInstrucoes:
+	addi $sp, $sp, -4
+	sw $ra, ($sp)
+	move $t0, $s3
 	la $t4, NomeLabel
 	la $t5, EnderecoLabel
 	la $t6, NomeInst 
@@ -352,13 +435,11 @@ InterpretadordeInstrucoes:
 				ArmazenaMnemonico:
 					move $a0, $t3			#Armazena o numero correspondente a função
 					bge $t3, 39, ContaPseudo
-					addi $s4, $s4, 1
 					jal TrataInstrucao
 					j ProximaLinha
 					j Sair
 				
 				ContaPseudo:
-					addi $s4, $s4, 2
 					jal TrataInstrucao
 					j ProximaLinha
 					j Sair
@@ -373,34 +454,12 @@ InterpretadordeInstrucoes:
 				j ProximaLinha	
 		
 		NovaLabel:
-			sw $s4, 0($t5)			#Grava endereço correspondente a Label encontrada
-			addi $t5, $t5, 4 
-			move $t1, $t0
-			move $t2, $t0
-			addi $t2, $t2, -1
-			
-			IniciodaLabel:
-				addi $t1, $t1, -1
-				lbu $t3, -1($t1)
-				beq $t3, 10, GravaLabel		#Encontra NewLine
-				beq $t3, 9, GravaLabel		#Encontra Tab
-				beq $t3, 32, GravaLabel		#Encontra Espaço
-				j IniciodaLabel
-			
-			GravaLabel:
-				lbu $t3, 0($t1)
-				sb $t3, 0($t4)
-				beq $t1, $t2, FimNovaLabel
-				addi $t1, $t1, 1
-				addi $t4, $t4, 1
-				j GravaLabel
+			lbu $t1, 0($t0)
+			addi $t0, $t0, 1
+			beq $t1, 10, FimNovaLabel
+			j NovaLabel
 			
 			FimNovaLabel:
-				lui $t3, 0
-				addi $t4, $t4, 1
-				sb $t3, 0($t4)
-				addi $t0, $t0, 2
-				addi $t4, $t4, 1
 				j LoopInterpretador
 	
 		NovaReferencia:

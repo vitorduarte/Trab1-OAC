@@ -26,12 +26,12 @@ div $a1, $t5
 divu $a1, $t3
 mfhi $t1
 mflo $v0
-	label4:
+    label4:
 sll $t1, $t4, 20
 srl $t3, $t1, 3
 sra $t5, $t7, 12
 lw $t2, 4($t4)
-label5:
+        label5:
 lbu $t2, 3($t2)
 lhu $t4, 9($t4)
 ll $s0, 1($t2)
@@ -42,4 +42,5 @@ sc $a0, 43($t0)
 j label2
 jal label1
 jal label4
-j label5
+j label6
+label6:
