@@ -1,5 +1,6 @@
 .text
 
+
 add $t1,  $t2, $t3
 addu $s1,  $t2, $t6
 sub  $s1,  $t2, $t3
@@ -21,5 +22,7 @@ mult $t1, $t6
 multu $a0, $v1
 div $a1, $t5
 divu $a1, $t3
+mfhi $t1
+mflo $v0
 
 

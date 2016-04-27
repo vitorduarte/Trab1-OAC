@@ -12,7 +12,7 @@ EnderecoLabel: .space 400	#Espaço para registrar endereço de  100 Labels
 NomeInst: .ascii "add\0addu\0sub\0subu\0and\0or\0nor\0slt\0sltu\0addi\0addiu\0slti\0sltiu\0andi\0ori\0beq\0bne\0sll\0srl\0sra\0j\0jal\0jr\0lw\0lbu\0lhu\0ll\0sb\0sh\0sw\0sc\0lui\0mult\0multu\0div\0divu\0mfhi\0mflo\0\0"
 OpcodeInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 9, 10, 11, 12, 13, 4, 5, 0, 1, 3, 2, 3, 0, 35, 36, 37, 48, 40, 41, 43, 56, 15, 0, 0, 0, 0, 0,0
 ShamtInst: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 4, 4, 4, 5,5, 0, 7, 7, 7, 7, 7, 7, 7, 7, 0, 0, 0, 0, 0, 10, 10
-FunctInst: .word 32, 33, 34, 35, 36, 37, 39, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 25, 26, 27, 16, 17  
+FunctInst: .word 32, 33, 34, 35, 36, 37, 39, 42, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 25, 26, 27, 16, 18  
 TipoInst: .word 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5,5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 8, 9, 9, 9, 9, 10, 10
 
 #Tabela para registradores
@@ -414,6 +414,7 @@ TrataInstrucao:
 	beq $t2, 6, Tipo6
 	beq $t2, 8, Tipo8
 	beq $t2, 9, Tipo9
+	beq $t2, 10, Tipo10
 	j InstrucaonaoSuportada
 	
 		Tipo1:
@@ -661,7 +662,34 @@ TrataInstrucao:
 				jal GeraHex
 				jal GravaInstrucao
 				j FimTrataInstrucao
+		
+		Tipo10:
+			EncontraRd10:
+				lbu $t2, ($t0)
+				addi $t0, $t0, 1
+				beq $t2, 32, EncontraRd10	#Encontra espaço
+				beq $t2, 9, EncontraRd10		#Encontra tab
+				beq $t2, 36, LerRd10		#Encontra $
+				j ErrodeSintaxe
+				
+			LerRd10:
+				move $a0, $t0
+				jal ObtemRegistrador
+				sw $v0, rd
+				move $t0, $v1
 			
+			DadosTipo10:
+				move $a0, $t1
+				jal ObtemOpcode
+				move $a0, $t1
+				sw $zero, shamt
+				move $a0, $t1
+				jal ObtemFunct
+				sw $zero, rs
+				sw $zero, rt
+				jal GeraHex
+				jal GravaInstrucao
+				j FimTrataInstrucao
 			
 					
 				
@@ -821,6 +849,7 @@ GeraHex:
 	beq $t1, 6, HexTipoR
 	beq $t1, 8, HexTipoI
 	beq $t1, 9, HexTipoR
+	beq $t1, 10, HexTipoR
 	j ErrodeConversao
 
 	HexTipoR:
@@ -905,23 +934,23 @@ ErrodeConversao:
 	j SaidadeErro
 
 ConverteHex:
-	li		$t1, 8			# numeros de bytes para converter
-	la		$t2, CaractereHexa		# endereco do vetor de caracteres
-	la		$t3,InstrucaoHexa+7		# endereco do InstrucaoHexa
+	li $t1, 8			# numeros de bytes para converter
+	la $t2, CaractereHexa		# endereco do vetor de caracteres
+	la $t3, InstrucaoHexa+7		# endereco do InstrucaoHexa
 	
 	LoopConverteHex:	
-		andi		$t7,$a0,0xF			# mascaramento
-		add		$t8,$t2,$t7			# somar o valor do digito com o endereco de hexa para pegar o endereco do digito
-		lb		$t8,0($t8)			# pegar o valor ascci do digito
-		sb		$t8,0($t3)			# salvar o valor ascci no InstrucaoHexa
-		srl		$a0,$a0,4			# pegar os proximos 4 digitos da instrucao
-		addi		$t3,$t3,-1			# andar na posicao do InstrucaoHexa
-		addi		$t1,$t1,-1			# decrementar $t1 para saber que andou para o proximo digito
-		bne		$t1,$0, LoopConverteHex		# checar se tem mais digitos
+		andi $t7, $a0, 0xF			# mascaramento
+		add $t8, $t2, $t7			# somar o valor do digito com o endereco de hexa para pegar o endereco do digito
+		lb $t8, 0($t8)			# pegar o valor ascci do digito
+		sb $t8, 0($t3)			# salvar o valor ascci no InstrucaoHexa
+		srl $a0, $a0, 4			# pegar os proximos 4 digitos da instrucao
+		addi $t3, $t3, -1			# andar na posicao do InstrucaoHexa
+		addi $t1, $t1, -1			# decrementar $t1 para saber que andou para o proximo digito
+		bne $t1, $0, LoopConverteHex		# checar se tem mais digitos
 	
 	ImprimeTela:
-		la		$a0, InstrucaoHexa
-		li		$v0, 4			# mudar para escrever em arquivo
+		la $a0, InstrucaoHexa
+		li $v0, 4			# mudar para escrever em arquivo
 		syscall
 		jr $ra
 		
