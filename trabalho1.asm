@@ -1,3 +1,9 @@
+# 		Laboratório 1 - OAC - 1/2016
+#			27/04/2016
+# Alunos:
+# 	-Vitor Alves Duarte  - 13/0018546
+# 	-Alexandre Crepory Abbott de Oliveira -  11/0146956 
+
 .data
 
 #Manipulação de Arquivos
@@ -75,8 +81,6 @@ ErronaLabel: .asciiz "ERRO 10: Label informada não foi encontrada"
 #s2 - Endereço de memoria dos dados lidos do arquivo de entrada
 #s3 - Posição de inicio do .text
 #s4 - Contador de instruções
-
-
 
 .text
 
@@ -206,42 +210,42 @@ EncontrarText:
 	LoopEncontraText:
 		EncontraPonto:
 			lbu $t1, 0($t0)
-			beq $t1, 0, ErroText	#Encontra NULL
+			beq $t1, 0, ErroText		#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 46, EncontraT1		#Encontrar o ponto ( .)
 			j LoopEncontraText
 			
 		EncontraT1:
 			lbu $t1, 0($t0)
-			beq $t1, 0,  ErroText	#Encontra NULL
+			beq $t1, 0,  ErroText		#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 116, EncontraE		#Encontrar ( T )
 			j LoopEncontraText
 		
 		EncontraE:
 			lbu $t1, 0($t0)
-			beq $t1, 0,  ErroText	#Encontra NULL
+			beq $t1, 0,  ErroText		#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 101, EncontraX 	#Encontrar ( E )
 			j LoopEncontraText
 		
 		EncontraX:
 			lbu $t1, 0($t0)
-			beq $t1, 0,  ErroText	#Encontra NULL
+			beq $t1, 0,  ErroText		#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 120, EncontraT2	#Encontrar ( X )
 			j LoopEncontraText
 			
 		EncontraT2:
 			lbu $t1, 0($t0)
-			beq $t1, 0,  ErroText	#Encontra NULL
+			beq $t1, 0,  ErroText		#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 116, EncontraFim 	#Encontrar ( T )
 			j LoopEncontraText
 			
 		EncontraFim:
 			lbu $t1, 0($t0)
-			beq $t1, 0, TextEncontrado	#Encontra NULL
+			beq $t1, 0, TextEncontrado		#Encontra NULL
 			addi $t0, $t0, 1
 			beq $t1, 32, TextEncontrado		#Encontra Espaço
 			beq $t1, 10, TextEncontrado		#Encontra NewLine
@@ -1169,9 +1173,9 @@ ConverteHex:
 	LoopConverteHex:	
 		andi $t7, $a0, 0xF			# mascaramento
 		add $t8, $t2, $t7			# somar o valor do digito com o endereco de hexa para pegar o endereco do digito
-		lb $t8, 0($t8)			# pegar o valor ascci do digito
-		sb $t8, 0($t3)			# salvar o valor ascci no InstrucaoHexa
-		srl $a0, $a0, 4			# pegar os proximos 4 digitos da instrucao
+		lb $t8, 0($t8)				# pegar o valor ascci do digito
+		sb $t8, 0($t3)				# salvar o valor ascci no InstrucaoHexa
+		srl $a0, $a0, 4				# pegar os proximos 4 digitos da instrucao
 		addi $t3, $t3, -1			# andar na posicao do InstrucaoHexa
 		addi $t1, $t1, -1			# decrementar $t1 para saber que andou para o proximo digito
 		bne $t1, $0, LoopConverteHex		# checar se tem mais digitos

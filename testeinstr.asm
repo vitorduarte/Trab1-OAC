@@ -1,3 +1,5 @@
+#Arquivo de teste de instruçoes suportadas
+
 .text
 label1:
 add $t1,  $t2, $t3
